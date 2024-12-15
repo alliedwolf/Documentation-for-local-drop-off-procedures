@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Documentation Search</title>
+    <style>
+        body { max-width: 800px; margin: 40px auto; padding: 0 20px; font-family: Arial, sans-serif; }
+        .search-container { margin-bottom: 20px; }
+        input { width: 70%; padding: 10px; }
+        button { padding: 10px 20px; }
+        #answer { margin-top: 20px; white-space: pre-wrap; }
+        .loading { color: #666; }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Ask a question about the documentation...">
+        <button onclick="performSearch()">Search</button>
+    </div>
+    <div id="answer"></div>
+
+    <script>
+        async function performSearch() {
+            const searchInput = document.getElementById('searchInput');const answerDiv = document.getElementById('answer');
+            const query = searchInput.value;
+
+            answerDiv.innerHTML = '<div class="loading">Loading...</div>';
+
+            const projectUrl = 'https://gfcgurrkwnqwhzdlijhp.supabase.co/functions/v1/query';
+            const queryUrl = `${projectUrl}?query=${encodeURIComponent(query)}`;
+
+            try {
+                const eventSource = new EventSource(queryUrl);
+
+                let answer = '';
+                eventSource.onmessage = (e) => {
+                    if (e.data === '[DONE]') {
+                        eventSource.close();
+                        return;
+                    }
+                    const completion = JSON.parse(e.data);
+                    const text = completion.choices[0].text;
+                    answer += text;
+                    answerDiv.innerHTML = answer;
+                };
+
+                eventSource.onerror = (error) => {
+                    eventSource.close();
+                    answerDiv.innerHTML = 'Error: Could not get response from the server.';
+                    console.error('Error:', error);
+                };
+            } catch (error) {
+                answerDiv.innerHTML = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
